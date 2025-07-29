@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Prediksi Hilal</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Prediksi Hilal</h1>
+  <input type="file" accept="image/*" id="imageUpload" />
+  <br><br>
+  <img id="preview" width="300" />
+  <h2>Hasil Prediksi:</h2>
+  <div id="result">Belum ada hasil</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+  <script>
+    const URL = "https://teachablemachine.withgoogle.com/models/11raQ4Xwv/";
+    let model, maxPredictions;
+
+    async function init() {
+      try {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        console.log("Memuat model...");
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+        console.log("Model berhasil dimuat!");
+      } catch (error) {
+        console.error("Error memuat model:", error);
+        document.getElementById("result").innerHTML = "Error: Gagal memuat model prediksi";
+      }
+    }
+
+    async function predictImage(image) {
+      if (!model) {
+        document.getElementById("result").innerHTML = "Model belum siap, silakan tunggu...";
+        return;
+      }
+
+      try {
+        const prediction = await model.predict(image, false);
+        prediction.sort((a, b) => b.probability - a.probability);
+
+        const resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = "";
+        prediction.forEach(p => {
+          resultDiv.innerHTML += `${p.className}: ${(p.probability * 100).toFixed(2)}%<br>`;
+        });
+      } catch (error) {
+        console.error("Error prediksi:", error);
+        document.getElementById("result").innerHTML = "Error: Gagal melakukan prediksi";
+      }
+    }
+
+    document.getElementById("imageUpload").addEventListener("change", function(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const img = document.getElementById("preview");
+        img.src = e.target.result;
+
+        img.onload = () => {
+          if (model) {
+            predictImage(img);
+          } else {
+            document.getElementById("result").innerHTML = "Sedang memuat model, silakan tunggu...";
+          }
+        };
+      };
+
+      if (file) {
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Tunggu sampai halaman dimuat sepenuhnya
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
